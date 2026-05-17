@@ -154,23 +154,36 @@ ec2 = boto3.client('ec2')
 
 def lambda_handler(event, context):
 
+    print("===== Lambda Execution Started =====")
+
     response = ec2.describe_instances(
         Filters=[
             {
                 'Name': 'tag:Backup',
                 'Values': ['True']
+            },
+            {
+                'Name': 'instance-state-name',
+                'Values': ['running']
             }
         ]
     )
 
+    instances_found = False
+
     for reservation in response['Reservations']:
+
         for instance in reservation['Instances']:
+
+            instances_found = True
 
             instance_id = instance['InstanceId']
 
+            print(f"Found EC2 Instance: {instance_id}")
+
             ami_name = f"{instance_id}-backup-{datetime.now().strftime('%Y-%m-%d-%H-%M')}"
 
-            print(f"Creating AMI for {instance_id}")
+            print(f"Creating AMI: {ami_name}")
 
             image = ec2.create_image(
                 InstanceId=instance_id,
@@ -180,7 +193,18 @@ def lambda_handler(event, context):
 
             image_id = image['ImageId']
 
-            print(f"AMI Created: {image_id}")
+            print(f"AMI Successfully Created: {image_id}")
+
+    if not instances_found:
+
+        print("No EC2 instances found with Backup=True tag")
+
+        return {
+            'statusCode': 404,
+            'body': 'No tagged EC2 instances found'
+        }
+
+    print("===== Lambda Execution Completed Successfully =====")
 
     return {
         'statusCode': 200,
