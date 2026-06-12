@@ -1,4 +1,4 @@
-````md
+
 # AWS EC2 Core Resources Interview Guide
 
 ---
